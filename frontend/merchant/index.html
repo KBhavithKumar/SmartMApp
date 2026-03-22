@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartPay — Merchant Dashboard</title>
+  <link rel="stylesheet" href="assets/style.css"/>
+  <style>
+    /* ── Layout ── */
+    .app { display: flex; min-height: 100vh; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 220px; background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; padding: 24px 0;
+      position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+      transition: transform 0.3s ease;
+    }
+
+    .logo { padding: 0 20px 28px; display: flex; align-items: center; gap: 10px; }
+    .logo-icon { width: 36px; height: 36px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .logo-text { font-family: var(--font-head); font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 20px; cursor: pointer; color: var(--muted);
+      font-size: 14px; font-weight: 600; transition: all 0.15s;
+      border-left: 2px solid transparent; text-decoration: none;
+    }
+    .nav-item:hover { color: var(--text); background: var(--surface2); }
+    .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(79,142,247,0.07); }
+    .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+    .sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); margin-top: auto; }
+    .env-badge { display: inline-block; background: rgba(251,191,36,0.15); color: var(--warn); border: 1px solid rgba(251,191,36,0.3); padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .sidebar-footer p { font-size: 11px; color: var(--muted); }
+
+    /* ── Hamburger ── */
+    .hamburger { display: none; position: fixed; top: 16px; left: 16px; z-index: 200; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; cursor: pointer; font-size: 18px; }
+    .overlay-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 99; }
+
+    /* ── Main ── */
+    .main { margin-left: 220px; flex: 1; padding: 32px 36px; max-width: 100%; }
+
+    /* ── Page Header ── */
+    .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
+    .page-title { font-family: var(--font-head); font-size: 26px; font-weight: 800; letter-spacing: -0.8px; }
+    .page-sub { color: var(--muted); font-size: 13px; margin-top: 3px; }
+
+    /* ── Stats ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; transition: transform 0.2s, border-color 0.2s; }
+    .stat-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+    .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 700; }
+    .stat-value { font-family: var(--font-head); font-size: 28px; font-weight: 800; margin: 8px 0 2px; letter-spacing: -1px; }
+    .stat-sub { font-size: 12px; color: var(--muted); }
+    .stat-card.c1 .stat-value { color: var(--green); }
+    .stat-card.c2 .stat-value { color: var(--accent); }
+    .stat-card.c3 .stat-value { color: var(--warn); }
+    .stat-card.c4 .stat-value { color: var(--danger); }
+
+    /* ── Table ── */
+    .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .table-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
+    .table-title { font-family: var(--font-head); font-weight: 700; font-size: 15px; }
+    .table-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .filter-row { display: flex; gap: 8px; padding: 12px 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
+    .filter-btn { padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: var(--font-body); }
+    .filter-btn:hover { color: var(--text); border-color: var(--text); }
+    .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .search-box { margin-left: auto; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; font-family: var(--font-body); font-size: 13px; color: var(--text); outline: none; width: 200px; transition: border-color 0.15s; }
+    .search-box:focus { border-color: var(--accent); }
+    .search-box::placeholder { color: var(--muted); }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead th { text-align: left; padding: 11px 16px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); font-weight: 700; border-bottom: 1px solid var(--border); background: var(--surface2); white-space: nowrap; }
+    tbody tr { border-bottom: 1px solid rgba(37,42,56,0.7); transition: background 0.1s; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody tr:last-child { border-bottom: none; }
+    td { padding: 13px 16px; font-size: 13px; vertical-align: middle; }
+    .td-name { font-weight: 600; }
+    .td-email { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .td-amount { font-family: var(--font-head); font-weight: 700; font-size: 14px; }
+    .td-id { font-family: monospace; font-size: 11px; color: var(--muted); }
+
+    /* ── Modal ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); z-index: 500; align-items: center; justify-content: center; padding: 16px; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; width: 100%; max-width: 480px; animation: slideUp 0.25s ease; max-height: 90vh; overflow-y: auto; }
+    .modal-hd { display: flex; justify-content: space-between; align-items: center; padding: 22px 24px 18px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); z-index: 1; }
+    .modal-title { font-family: var(--font-head); font-size: 18px; font-weight: 800; }
+    .modal-close { width: 30px; height: 30px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; color: var(--muted); font-size: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+    .modal-close:hover { color: var(--text); border-color: var(--accent); }
+    .modal-body { padding: 22px 24px; }
+    .modal-foot { padding: 14px 24px 22px; display: flex; justify-content: flex-end; gap: 10px; }
+
+    .detail-row { display: flex; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid rgba(37,42,56,0.6); font-size: 13px; }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-k { color: var(--muted); font-weight: 600; }
+    .detail-v { font-family: monospace; font-size: 12px; text-align: right; }
+
+    .success-box { background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.2); border-radius: 10px; padding: 18px; text-align: center; }
+    .success-box .big { font-family: var(--font-head); font-size: 28px; font-weight: 800; color: var(--green); }
+
+    @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+    /* ── Responsive ── */
+    @media (max-width: 1024px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .overlay-bg.open { display: block; }
+      .hamburger { display: block; }
+      .main { margin-left: 0; padding: 72px 16px 24px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .stat-value { font-size: 22px; }
+      table { display: block; overflow-x: auto; white-space: nowrap; }
+      .search-box { width: 100%; margin-left: 0; }
+      .page-header { flex-direction: column; align-items: flex-start; }
+    }
+
+    @media (max-width: 480px) {
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Hamburger -->
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="overlay-bg" id="overlayBg" onclick="toggleSidebar()"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text">SmartPay</div>
+    </div>
+    <nav>
+      <a class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')">
+        <span class="nav-icon">◈</span> Dashboard
+      </a>
+      <a class="nav-item" data-page="orders" onclick="showPage('orders')">
+        <span class="nav-icon">⟁</span> Orders
+      </a>
+      <a class="nav-item" data-page="create" onclick="showPage('create')">
+        <span class="nav-icon">＋</span> New Payment
+      </a>
+      <a class="nav-item" data-page="refunds" onclick="showPage('refunds')">
+        <span class="nav-icon">↩</span> Refunds
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="env-badge" id="envBadge">SANDBOX</div>
+      <p id="merchantUser" style="font-size:12px;color:var(--muted);margin-bottom:8px">Merchant</p>
+      <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;font-size:12px" onclick="Auth.logout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main" id="mainContent">
+
+    <!-- ── Dashboard Page ── -->
+    <div id="page-dashboard">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Dashboard</div>
+          <div class="page-sub">Payment activity overview</div>
+        </div>
+        <button class="btn btn-primary" onclick="openCreateModal()">＋ New Payment</button>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card c1">
+          <div class="stat-label">Collected</div>
+          <div class="stat-value" id="statAmount">₹0</div>
+          <div class="stat-sub" id="statPaid">0 payments</div>
+        </div>
+        <div class="stat-card c2">
+          <div class="stat-label">Total Orders</div>
+          <div class="stat-value" id="statTotal">0</div>
+          <div class="stat-sub">all time</div>
+        </div>
+        <div class="stat-card c3">
+          <div class="stat-label">Pending</div>
+          <div class="stat-value" id="statPending">0</div>
+          <div class="stat-sub">awaiting payment</div>
+        </div>
+        <div class="stat-card c4">
+          <div class="stat-label">Failed</div>
+          <div class="stat-value" id="statFailed">0</div>
+          <div class="stat-sub">failed/dropped</div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-head">
+          <div class="table-title">Recent Orders</div>
+          <button class="btn btn-ghost btn-sm" onclick="loadData()">↻ Refresh</button>
+        </div>
+        <div id="recentOrders"><div class="loading"><div class="spinner"></div> Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- ── Orders Page ── -->
+    <div id="page-orders" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">All Orders</div>
+          <div class="page-sub">Manage & track payments</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="loadData()">↻ Refresh</button>
+          <a id="exportBtn" href="#" class="btn btn-ghost btn-sm">⬇ Export CSV</a>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="filter-row">
+          <button class="filter-btn active" onclick="setFilter('ALL',this)">All</button>
+          <button class="filter-btn" onclick="setFilter('PAID',this)">Paid</button>
+          <button class="filter-btn" onclick="setFilter('CREATED',this)">Pending</button>
+          <button class="filter-btn" onclick="setFilter('FAILED',this)">Failed</button>
+          <input class="search-box" placeholder="Search name, email, order ID..." oninput="setSearch(this.value)"/>
+        </div>
+        <div id="allOrders"><div class="loading"><div class="spinner"></div> Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- ── Create Payment Page ── -->
+    <div id="page-create" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">New Payment</div>
+          <div class="page-sub">Collect payment directly via Cashfree</div>
+        </div>
+      </div>
+
+      <div style="max-width:520px">
+        <div class="card" style="padding:28px">
+          <div id="createError" style="display:none;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--danger);margin-bottom:18px;"></div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Customer Name *</label>
+              <input class="form-input" id="f_name" placeholder="Rahul Sharma"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Phone *</label>
+              <input class="form-input" id="f_phone" placeholder="9876543210" maxlength="10"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email *</label>
+            <input class="form-input" id="f_email" type="email" placeholder="customer@email.com"/>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Amount (INR) *</label>
+              <input class="form-input" id="f_amount" type="number" placeholder="500" min="1"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Description</label>
+              <input class="form-input" id="f_desc" placeholder="Invoice #001"/>
+            </div>
+          </div>
+
+          <button class="btn btn-primary" style="width:100%;justify-content:center;padding:14px" id="createBtn" onclick="createPayment()">
+            ⚡ Generate Payment & Open Gateway
+          </button>
+        </div>
+
+        <div id="createSuccess" style="display:none;margin-top:16px">
+          <div class="card" style="padding:24px;border-color:rgba(52,211,153,0.3)">
+            <div style="color:var(--green);font-weight:700;font-size:13px;margin-bottom:12px">✓ ORDER CREATED</div>
+            <div style="font-family:var(--font-head);font-size:26px;font-weight:800" id="cs_amount"></div>
+            <div style="color:var(--muted);font-size:13px;margin:4px 0 16px" id="cs_name"></div>
+            <div style="font-family:monospace;font-size:12px;color:var(--muted);margin-bottom:16px" id="cs_orderId"></div>
+            <button class="btn btn-primary" style="width:100%;justify-content:center" id="openGatewayBtn" onclick="openGateway()">
+              🔗 Open Payment Gateway
+            </button>
+            <p style="font-size:11px;color:var(--muted);text-align:center;margin-top:10px">Customer will be redirected to Cashfree checkout</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ── Refunds Page ── -->
+    <div id="page-refunds" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Refunds</div>
+          <div class="page-sub">Issue and track payment refunds</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-head">
+          <div class="table-title">All Refunds</div>
+          <button class="btn btn-ghost btn-sm" onclick="loadRefunds()">↻ Refresh</button>
+        </div>
+        <div id="refundsList"><div class="loading"><div class="spinner"></div> Loading...</div></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Order Detail Modal -->
+<div class="modal-overlay" id="orderModal">
+  <div class="modal">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-title">Order Details</div>
+        <div id="modal_orderId" style="font-family:monospace;font-size:11px;color:var(--muted);margin-top:3px"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="success-box" style="margin-bottom:18px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:4px">AMOUNT</div>
+        <div class="big" id="modal_amount"></div>
+        <div style="margin-top:8px" id="modal_status"></div>
+      </div>
+      <div id="modal_details"></div>
+      <div id="modal_sandbox" style="margin-top:16px;display:none">
+        <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Sandbox: Simulate Status</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-success btn-sm" onclick="simulateStatus('PAID')">Mark Paid</button>
+          <button class="btn btn-danger btn-sm" onclick="simulateStatus('FAILED')">Mark Failed</button>
+          <button class="btn btn-ghost btn-sm" onclick="simulateStatus('EXPIRED')">Mark Expired</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/config.js"></script>
+<script>
+  let allOrders = [];
+  let currentFilter = 'ALL';
+  let currentSearch = '';
+  let currentOrderId = null;
+  let pendingGatewaySession = null;
+
+  // ── Init ──
+  async function init() {
+    document.getElementById('exportBtn').href = `${CONFIG.API_URL}/orders/export/csv`;
+    await loadData();
+  }
+
+  async function loadData() {
+    try {
+      const [ordersRes, statsRes] = await Promise.all([
+        Utils.api('GET', '/orders'),
+        Utils.api('GET', '/orders/stats'),
+      ]);
+      allOrders = ordersRes.orders || [];
+      const s = statsRes.stats || {};
+      document.getElementById('statAmount').textContent = Utils.fmt(s.total_amount || 0);
+      document.getElementById('statPaid').textContent = `${s.paid || 0} payments`;
+      document.getElementById('statTotal').textContent = s.total || 0;
+      document.getElementById('statPending').textContent = s.pending || 0;
+      document.getElementById('statFailed').textContent = s.failed || 0;
+      renderRecentOrders();
+      renderAllOrders();
+    } catch (e) {
+      Utils.showToast('Failed to load data', 'error');
+    }
+  }
+
+  // ── Pages ──
+  function showPage(page) {
+    document.querySelectorAll('[id^="page-"]').forEach(p => p.style.display = 'none');
+    document.getElementById(`page-${page}`).style.display = 'block';
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelector(`[data-page="${page}"]`).classList.add('active');
+    if (window.innerWidth <= 768) toggleSidebar();
+  }
+
+  // ── Sidebar toggle ──
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('overlayBg').classList.toggle('open');
+  }
+
+  // ── Render helpers ──
+  function orderRow(o, cols) {
+    const paid = o.status === 'PAID';
+    if (cols === 'recent') {
+      return `<tr onclick="openOrderModal('${o.id}')" style="cursor:pointer">
+        <td><div class="td-name">${o.customer_name}</div><div class="td-email">${o.customer_email}</div></td>
+        <td><div class="td-amount" style="color:${paid?'var(--green)':'var(--text)'}">${Utils.fmt(o.amount)}</div></td>
+        <td>${Utils.badge(o.status)}</td>
+        <td style="color:var(--muted);font-size:12px">${Utils.timeAgo(o.created_at)}</td>
+      </tr>`;
+    }
+    return `<tr onclick="openOrderModal('${o.id}')" style="cursor:pointer">
+      <td class="td-id">${o.id}</td>
+      <td><div class="td-name">${o.customer_name}</div><div class="td-email">${o.customer_email}</div></td>
+      <td><div class="td-amount" style="color:${paid?'var(--green)':'var(--text)'}">${Utils.fmt(o.amount)}</div></td>
+      <td style="color:var(--muted);font-size:12px">${o.description || '—'}</td>
+      <td>${Utils.badge(o.status)}</td>
+      <td style="color:var(--muted);font-size:12px">${Utils.timeAgo(o.created_at)}</td>
+    </tr>`;
+  }
+
+  function renderRecentOrders() {
+    const el = document.getElementById('recentOrders');
+    const recent = allOrders.slice(0, 8);
+    if (!recent.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">💳</div><div class="empty-title">No orders yet</div></div>`; return; }
+    el.innerHTML = `<table><thead><tr><th>Customer</th><th>Amount</th><th>Status</th><th>When</th></tr></thead><tbody>${recent.map(o => orderRow(o,'recent')).join('')}</tbody></table>`;
+  }
+
+  function renderAllOrders() {
+    const el = document.getElementById('allOrders');
+    let filtered = allOrders;
+    if (currentFilter !== 'ALL') {
+      filtered = filtered.filter(o => {
+        if (currentFilter === 'FAILED') return ['FAILED','DROPPED','EXPIRED'].includes(o.status);
+        if (currentFilter === 'CREATED') return ['CREATED','ACTIVE'].includes(o.status);
+        return o.status === currentFilter;
+      });
+    }
+    if (currentSearch) {
+      const q = currentSearch.toLowerCase();
+      filtered = filtered.filter(o =>
+        o.customer_name.toLowerCase().includes(q) ||
+        o.customer_email.toLowerCase().includes(q) ||
+        o.id.toLowerCase().includes(q)
+      );
+    }
+    if (!filtered.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No orders found</div></div>`; return; }
+    el.innerHTML = `<div style="overflow-x:auto"><table><thead><tr><th>Order ID</th><th>Customer</th><th>Amount</th><th>Description</th><th>Status</th><th>Created</th></tr></thead><tbody>${filtered.map(o => orderRow(o,'full')).join('')}</tbody></table></div>`;
+  }
+
+  function setFilter(f, btn) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderAllOrders();
+  }
+
+  function setSearch(v) { currentSearch = v; renderAllOrders(); }
+
+  // ── Create Payment ──
+  async function createPayment() {
+    const name = document.getElementById('f_name').value.trim();
+    const email = document.getElementById('f_email').value.trim();
+    const phone = document.getElementById('f_phone').value.trim();
+    const amount = document.getElementById('f_amount').value;
+    const desc = document.getElementById('f_desc').value.trim();
+
+    document.getElementById('createError').style.display = 'none';
+
+    if (!name || !email || !phone || !amount) {
+      document.getElementById('createError').textContent = 'Please fill all required fields.';
+      document.getElementById('createError').style.display = 'block';
+      return;
+    }
+
+    const btn = document.getElementById('createBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Creating order...';
+
+    try {
+      const data = await Utils.api('POST', '/payments/create-order', { customerName: name, customerEmail: email, customerPhone: phone, amount, description: desc });
+
+      pendingGatewaySession = data.paymentSessionId;
+      document.getElementById('cs_amount').textContent = Utils.fmt(data.amount);
+      document.getElementById('cs_name').textContent = data.customerName;
+      document.getElementById('cs_orderId').textContent = `Order: ${data.orderId}`;
+      document.getElementById('createSuccess').style.display = 'block';
+
+      loadData();
+      Utils.showToast('Order created successfully!');
+    } catch (e) {
+      document.getElementById('createError').textContent = e.message;
+      document.getElementById('createError').style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '⚡ Generate Payment & Open Gateway';
+    }
+  }
+
+  function openGateway() {
+    if (!pendingGatewaySession) return;
+    // Open Cashfree hosted checkout
+    const checkoutUrl = `https://payments${window.CF_ENV === 'PRODUCTION' ? '' : '-test'}.cashfree.com/order/#${pendingGatewaySession}`;
+    window.open(checkoutUrl, '_blank');
+  }
+
+  // ── Order Modal ──
+  function openOrderModal(id) {
+    const o = allOrders.find(x => x.id === id);
+    if (!o) return;
+    currentOrderId = id;
+    document.getElementById('modal_orderId').textContent = o.id;
+    document.getElementById('modal_amount').textContent = Utils.fmt(o.amount);
+    document.getElementById('modal_status').innerHTML = Utils.badge(o.status);
+
+    const rows = [
+      ['Customer', o.customer_name],
+      ['Email', o.customer_email],
+      ['Phone', o.customer_phone],
+      ['Description', o.description || '—'],
+      ['Payment Method', o.payment_method || '—'],
+      ['CF Payment ID', o.cf_payment_id || '—'],
+      ['Created', new Date(o.created_at).toLocaleString('en-IN')],
+      ['Paid At', o.paid_at ? new Date(o.paid_at).toLocaleString('en-IN') : '—'],
+    ];
+
+    document.getElementById('modal_details').innerHTML = rows.map(([k,v]) =>
+      `<div class="detail-row"><span class="detail-k">${k}</span><span class="detail-v">${v}</span></div>`
+    ).join('');
+
+    // Show sandbox controls if not paid
+    document.getElementById('modal_sandbox').style.display =
+      ['CREATED','ACTIVE'].includes(o.status) ? 'block' : 'none';
+
+    document.getElementById('orderModal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('orderModal').classList.remove('open');
+    currentOrderId = null;
+  }
+
+  async function simulateStatus(status) {
+    if (!currentOrderId) return;
+    try {
+      await Utils.api('PATCH', `/payments/${currentOrderId}/status`, { status });
+      Utils.showToast(`Status updated to ${status}`);
+      closeModal();
+      await loadData();
+    } catch (e) {
+      Utils.showToast('Update failed', 'error');
+    }
+  }
+
+  function openCreateModal() { showPage('create'); }
+
+  // Close modal on overlay click
+  document.getElementById('orderModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+
+  // Auth guard
+  if (!Auth.requireAuth()) { throw new Error('Not authenticated'); }
+  document.getElementById('merchantUser').textContent = Auth.getUser() || 'Merchant';
+
+  // Refund modal state
+  let refundOrderId = null;
+
+  async function loadRefunds() {
+    const el = document.getElementById('refundsList');
+    try {
+      const res = await Utils.api('GET', '/refunds');
+      const refunds = res.refunds || [];
+      if (!refunds.length) {
+        el.innerHTML = `<div class="empty-state"><div class="empty-icon">↩</div><div class="empty-title">No refunds yet</div></div>`;
+        return;
+      }
+      el.innerHTML = `<div style="overflow-x:auto"><table>
+        <thead><tr><th>Refund ID</th><th>Order ID</th><th>Amount</th><th>Reason</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>${refunds.map(r => `<tr>
+          <td class="td-id">${r.id}</td>
+          <td class="td-id">${r.order_id}</td>
+          <td style="font-family:var(--font-head);font-weight:700">${Utils.fmt(r.amount)}</td>
+          <td style="color:var(--muted);font-size:12px">${r.reason || '—'}</td>
+          <td>${Utils.badge(r.status)}</td>
+          <td style="color:var(--muted);font-size:12px">${Utils.timeAgo(r.created_at)}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+    } catch(e) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-title">Failed to load refunds</div></div>`;
+    }
+  }
+
+  // Add refund button in order modal for paid orders
+  const origOpenModal = openOrderModal;
+  openOrderModal = function(id) {
+    origOpenModal(id);
+    refundOrderId = id;
+    const o = allOrders.find(x => x.id === id);
+    // Append refund button if paid
+    const sandbox = document.getElementById('modal_sandbox');
+    const existingRefund = document.getElementById('refundSection');
+    if (existingRefund) existingRefund.remove();
+    if (o && o.status === 'PAID') {
+      const div = document.createElement('div');
+      div.id = 'refundSection';
+      div.style.cssText = 'margin-top:16px;padding-top:16px;border-top:1px solid var(--border)';
+      div.innerHTML = `
+        <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Issue Refund</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="refundAmt" type="number" placeholder="Amount ₹" style="flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-family:var(--font-body);font-size:13px;color:var(--text);outline:none" max="${o.amount}" value="${o.amount}"/>
+          <input id="refundReason" placeholder="Reason" style="flex:2;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-family:var(--font-body);font-size:13px;color:var(--text);outline:none"/>
+          <button class="btn btn-danger btn-sm" onclick="issueRefund()">Refund</button>
+        </div>`;
+      sandbox.parentNode.insertBefore(div, sandbox.nextSibling);
+    }
+  };
+
+  async function issueRefund() {
+    const amount = document.getElementById('refundAmt')?.value;
+    const reason = document.getElementById('refundReason')?.value;
+    if (!amount || !refundOrderId) return;
+    try {
+      await Utils.api('POST', '/refunds', { orderId: refundOrderId, amount, reason });
+      Utils.showToast('Refund initiated successfully!');
+      closeModal();
+      loadData();
+    } catch(e) {
+      Utils.showToast(e.message, 'error');
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

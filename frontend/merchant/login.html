@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartPay — Login</title>
+  <link rel="stylesheet" href="../assets/style.css"/>
+  <style>
+    body {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 24px;
+      background: var(--bg);
+      background-image: radial-gradient(ellipse at 20% 50%, rgba(79,142,247,0.06) 0%, transparent 60%),
+                        radial-gradient(ellipse at 80% 20%, rgba(124,92,252,0.06) 0%, transparent 60%);
+    }
+
+    .login-wrap { width: 100%; max-width: 400px; animation: fadeUp 0.4s ease both; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+    .brand { text-align: center; margin-bottom: 32px; }
+    .brand-icon { width: 52px; height: 52px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 12px; box-shadow: 0 8px 24px rgba(79,142,247,0.3); }
+    .brand-name { font-family: var(--font-head); font-size: 26px; font-weight: 800; letter-spacing: -1px; }
+    .brand-sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+    .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 32px; }
+    .login-title { font-family: var(--font-head); font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+    .login-sub { color: var(--muted); font-size: 13px; margin-bottom: 26px; }
+
+    .input-wrap { position: relative; }
+    .input-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 15px; color: var(--muted); pointer-events: none; }
+    .form-input { padding-left: 42px; }
+
+    .error-box { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); border-radius: 10px; padding: 12px 16px; font-size: 13px; color: var(--danger); margin-bottom: 16px; display: none; }
+
+    .login-btn { width: 100%; padding: 14px; font-size: 15px; justify-content: center; border-radius: 12px; margin-top: 4px; }
+
+    .hint { text-align: center; margin-top: 20px; font-size: 12px; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+    .hint strong { color: var(--accent); }
+  </style>
+</head>
+<body>
+<div class="login-wrap">
+  <div class="brand">
+    <div class="brand-icon">⚡</div>
+    <div class="brand-name">SmartPay</div>
+    <div class="brand-sub">Merchant Portal</div>
+  </div>
+
+  <div class="login-card">
+    <div class="login-title">Welcome back</div>
+    <div class="login-sub">Sign in to your merchant dashboard</div>
+
+    <div class="error-box" id="errorBox"></div>
+
+    <div class="form-group">
+      <label class="form-label">Username</label>
+      <div class="input-wrap">
+        <span class="input-icon">👤</span>
+        <input class="form-input" id="username" placeholder="admin" autocomplete="username"/>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <div class="input-wrap">
+        <span class="input-icon">🔒</span>
+        <input class="form-input" id="password" type="password" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+    </div>
+
+    <button class="btn btn-primary login-btn" id="loginBtn" onclick="doLogin()">
+      Sign In →
+    </button>
+
+    <div class="hint">
+      Default credentials: <strong>admin</strong> / <strong>smartpay123</strong><br/>
+      Change via <code>MERCHANT_USERNAME</code> &amp; <code>MERCHANT_PASSWORD</code> env vars
+    </div>
+  </div>
+</div>
+
+<script src="../assets/config.js"></script>
+<script>
+  // Redirect if already logged in
+  if (localStorage.getItem('sp_token')) {
+    window.location.href = './index.html';
+  }
+
+  document.getElementById('password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+
+  async function doLogin() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    const errBox = document.getElementById('errorBox');
+    errBox.style.display = 'none';
+
+    if (!username || !password) {
+      errBox.textContent = 'Please enter username and password.';
+      errBox.style.display = 'block';
+      return;
+    }
+
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Signing in...';
+
+    try {
+      const res = await fetch(`${CONFIG.API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        localStorage.setItem('sp_token', data.token);
+        localStorage.setItem('sp_user', data.username);
+        window.location.href = './index.html';
+      } else {
+        errBox.textContent = data.error || 'Invalid credentials';
+        errBox.style.display = 'block';
+      }
+    } catch (e) {
+      errBox.textContent = 'Could not connect to server. Is the backend running?';
+      errBox.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Sign In →';
+    }
+  }
+</script>
+</body>
+</html>
