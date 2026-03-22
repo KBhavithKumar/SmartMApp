@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartPay — Secure Checkout</title>
+  <link rel="stylesheet" href="../assets/style.css"/>
+  <!-- Cashfree JS SDK -->
+  <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+  <style>
+    body {
+      background: #f4f4f8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 16px;
+      font-family: var(--font-body);
+    }
+
+    /* Light theme overrides for customer page */
+    :root {
+      --c-bg: #f4f4f8;
+      --c-card: #ffffff;
+      --c-border: #e5e7eb;
+      --c-ink: #111827;
+      --c-ink2: #374151;
+      --c-muted: #9ca3af;
+      --c-accent: #2563eb;
+      --c-green: #059669;
+      --c-green-bg: #ecfdf5;
+      --c-green-border: #6ee7b7;
+      --c-danger: #dc2626;
+    }
+
+    .page-wrap { width: 100%; max-width: 420px; animation: fadeUp 0.4s ease both; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+    /* Brand */
+    .brand { text-align: center; margin-bottom: 20px; }
+    .brand-icon { width: 44px; height: 44px; background: var(--c-ink); border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 8px; }
+    .brand-name { font-family: var(--font-head); font-size: 20px; font-weight: 800; color: var(--c-ink); letter-spacing: -0.5px; }
+    .brand-sub { font-size: 12px; color: var(--c-muted); margin-top: 2px; }
+
+    /* Card */
+    .pay-card { background: var(--c-card); border-radius: 24px; box-shadow: 0 4px 40px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid var(--c-border); }
+
+    /* Hero */
+    .hero { background: var(--c-ink); padding: 28px 28px 24px; text-align: center; position: relative; overflow: hidden; }
+    .hero::before { content:''; position:absolute; top:-50px; right:-50px; width:180px; height:180px; background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%); border-radius:50%; }
+    .hero-to { font-size: 11px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; margin-bottom: 4px; }
+    .hero-merchant { font-family: var(--font-head); font-size: 17px; color: #fff; font-weight: 700; margin-bottom: 18px; }
+    .hero-amount { font-family: var(--font-head); font-size: 48px; font-weight: 800; color: #fff; letter-spacing: -2px; line-height: 1; }
+    .hero-amount span { font-size: 20px; vertical-align: super; font-weight: 600; color: rgba(255,255,255,0.6); }
+    .hero-desc { font-size: 13px; color: rgba(255,255,255,0.45); margin-top: 8px; }
+
+    .trust-row { display: flex; justify-content: center; gap: 20px; margin-top: 18px; }
+    .trust-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: rgba(255,255,255,0.35); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* Form body */
+    .form-body { padding: 24px 24px 8px; }
+    .section-title { font-size: 11px; font-weight: 700; color: var(--c-muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px; }
+
+    /* Light form inputs */
+    .lf-group { margin-bottom: 14px; }
+    .lf-label { display: block; font-size: 12px; font-weight: 700; color: var(--c-ink2); margin-bottom: 6px; }
+    .lf-wrap { position: relative; }
+    .lf-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); font-size: 14px; color: var(--c-muted); pointer-events: none; }
+    .lf-input {
+      width: 100%; background: #f9fafb; border: 1.5px solid var(--c-border);
+      border-radius: 11px; padding: 12px 13px 12px 40px;
+      font-family: var(--font-body); font-size: 14px; color: var(--c-ink);
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .lf-input:focus { border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.08); background: #fff; }
+    .lf-input::placeholder { color: var(--c-muted); }
+    .lf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* Pay button */
+    .pay-btn {
+      width: 100%; background: var(--c-accent); color: #fff; border: none;
+      border-radius: 13px; padding: 16px; font-family: var(--font-head);
+      font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      letter-spacing: 0.2px; position: relative; overflow: hidden; margin: 8px 24px 0;
+      width: calc(100% - 48px);
+    }
+    .pay-btn::before { content:''; position:absolute; inset:0; background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 60%); }
+    .pay-btn:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(37,99,235,0.35); }
+    .pay-btn:active { transform: translateY(0); }
+    .pay-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .light-spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+
+    /* Error */
+    .error-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 12px 16px; font-size: 13px; color: var(--c-danger); margin: 0 24px 12px; display: none; }
+
+    /* Footer */
+    .pay-footer { padding: 16px 24px 20px; display: flex; align-items: center; justify-content: center; gap: 6px; border-top: 1px solid var(--c-border); margin-top: 16px; }
+    .pay-footer span { font-size: 12px; color: var(--c-muted); }
+    .cf-badge { font-size: 13px; font-weight: 800; color: var(--c-ink); letter-spacing: -0.3px; }
+    .cf-badge em { color: var(--c-accent); font-style: normal; }
+
+    /* Success screen */
+    .success-screen { display: none; padding: 44px 28px; text-align: center; }
+    .success-ring { width: 80px; height: 80px; background: var(--c-green-bg); border: 2px solid var(--c-green-border); border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 36px; animation: popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
+    @keyframes popIn { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
+    .success-title { font-family: var(--font-head); font-size: 24px; font-weight: 800; color: var(--c-ink); margin-bottom: 8px; }
+    .success-sub { color: var(--c-muted); font-size: 14px; line-height: 1.7; }
+    .success-amount { font-family: var(--font-head); font-size: 36px; font-weight: 800; color: var(--c-green); margin: 16px 0; }
+    .txn-ref { display: inline-block; background: #f3f4f6; border-radius: 8px; padding: 8px 16px; font-family: monospace; font-size: 12px; color: var(--c-ink2); margin-top: 4px; }
+
+    /* Failed screen */
+    .failed-screen { display: none; padding: 44px 28px; text-align: center; }
+    .failed-icon { font-size: 56px; margin-bottom: 16px; }
+    .failed-title { font-family: var(--font-head); font-size: 22px; font-weight: 800; color: var(--c-ink); margin-bottom: 8px; }
+    .failed-sub { color: var(--c-muted); font-size: 14px; margin-bottom: 24px; }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .lf-row { grid-template-columns: 1fr; }
+      .hero-amount { font-size: 40px; }
+      .trust-row { gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrap">
+
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-name">SmartPay</div>
+      <div class="brand-sub">Secure payment gateway</div>
+    </div>
+
+    <div class="pay-card">
+
+      <!-- Hero -->
+      <div class="hero" id="heroSection">
+        <div class="hero-to">Paying to</div>
+        <div class="hero-merchant" id="heroMerchant">SmartPay Merchant</div>
+        <div class="hero-amount"><span>₹</span><span id="heroAmount">—</span></div>
+        <div class="hero-desc" id="heroDesc">Loading...</div>
+        <div class="trust-row">
+          <div class="trust-item">🔒 SSL</div>
+          <div class="trust-item">✅ RBI Compliant</div>
+          <div class="trust-item">⚡ Instant</div>
+        </div>
+      </div>
+
+      <!-- Success Screen -->
+      <div class="success-screen" id="successScreen">
+        <div class="success-ring">✓</div>
+        <div class="success-title">Payment Successful!</div>
+        <div class="success-amount" id="suc_amount"></div>
+        <div class="success-sub">Your payment has been received.<br>A confirmation will be sent to your email.</div>
+        <div class="txn-ref" id="suc_ref"></div>
+      </div>
+
+      <!-- Failed Screen -->
+      <div class="failed-screen" id="failedScreen">
+        <div class="failed-icon">❌</div>
+        <div class="failed-title">Payment Failed</div>
+        <div class="failed-sub" id="fail_reason">Your payment could not be processed. Please try again.</div>
+        <button class="pay-btn" style="margin:0 auto;width:auto;padding:12px 28px" onclick="resetForm()">Try Again</button>
+      </div>
+
+      <!-- Payment Form -->
+      <div id="formSection">
+        <div class="form-body">
+          <div class="section-title">Your Details</div>
+
+          <div class="lf-row">
+            <div class="lf-group">
+              <label class="lf-label">Full Name *</label>
+              <div class="lf-wrap">
+                <span class="lf-icon">👤</span>
+                <input class="lf-input" id="c_name" placeholder="Rahul Sharma"/>
+              </div>
+            </div>
+            <div class="lf-group">
+              <label class="lf-label">Phone *</label>
+              <div class="lf-wrap">
+                <span class="lf-icon">📱</span>
+                <input class="lf-input" id="c_phone" placeholder="9876543210" maxlength="10" type="tel"/>
+              </div>
+            </div>
+          </div>
+
+          <div class="lf-group">
+            <label class="lf-label">Email *</label>
+            <div class="lf-wrap">
+              <span class="lf-icon">✉️</span>
+              <input class="lf-input" id="c_email" placeholder="you@email.com" type="email"/>
+            </div>
+          </div>
+
+          <!-- Amount input (shown if no pre-set amount) -->
+          <div class="lf-group" id="amountGroup" style="display:none">
+            <label class="lf-label">Amount (₹) *</label>
+            <div class="lf-wrap">
+              <span class="lf-icon" style="font-weight:700;color:#374151">₹</span>
+              <input class="lf-input" id="c_amount" placeholder="Enter amount" type="number" min="1"/>
+            </div>
+          </div>
+        </div>
+
+        <div class="error-box" id="errorBox"></div>
+
+        <button class="pay-btn" id="payBtn" onclick="initiatePayment()">
+          🔒 <span id="payBtnText">Pay Securely</span>
+        </button>
+
+        <div class="pay-footer">
+          <span>Powered by</span>
+          <span class="cf-badge">cash<em>free</em></span>
+          <span>· 256-bit TLS</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+<script src="../assets/config.js"></script>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const orderId = params.get('order_id');
+  let fixedAmount = null;
+  let fixedOrderId = null;
+
+  // ── Init: load order if order_id in URL ──
+  async function init() {
+    // Check if returning from Cashfree
+    const orderStatus = params.get('order_status');
+    if (orderStatus) {
+      await handleReturn();
+      return;
+    }
+
+    if (orderId) {
+      try {
+        const res = await Utils.api('GET', `/payments/status/${orderId}`);
+        const o = res.order;
+
+        if (o.status === 'PAID') { showSuccess(o); return; }
+
+        fixedAmount = o.amount;
+        fixedOrderId = o.id;
+
+        document.getElementById('heroAmount').textContent = Number(o.amount).toLocaleString('en-IN');
+        document.getElementById('heroDesc').textContent = o.description || 'Payment';
+
+        // Pre-fill customer
+        if (o.customer_name) document.getElementById('c_name').value = o.customer_name;
+        if (o.customer_email) document.getElementById('c_email').value = o.customer_email;
+        if (o.customer_phone) document.getElementById('c_phone').value = o.customer_phone;
+
+        document.getElementById('payBtnText').textContent = `Pay ${Utils.fmt(o.amount)}`;
+      } catch (e) {
+        showDynamicForm();
+      }
+    } else {
+      showDynamicForm();
+    }
+  }
+
+  function showDynamicForm() {
+    document.getElementById('heroAmount').textContent = '0';
+    document.getElementById('heroDesc').textContent = 'Enter amount below';
+    document.getElementById('amountGroup').style.display = 'block';
+    document.getElementById('payBtnText').textContent = 'Pay Securely';
+  }
+
+  // ── Handle return from Cashfree ──
+  async function handleReturn() {
+    const returnOrderId = params.get('order_id') || orderId;
+    const orderStatus = params.get('order_status');
+
+    document.getElementById('formSection').style.display = 'none';
+
+    if (orderStatus === 'PAID' || orderStatus === 'SUCCESS') {
+      try {
+        // Verify with backend
+        await Utils.api('POST', '/payments/verify', { orderId: returnOrderId });
+        const res = await Utils.api('GET', `/payments/status/${returnOrderId}`);
+        showSuccess(res.order);
+      } catch (e) {
+        showSuccess({ amount: 0, id: returnOrderId });
+      }
+    } else {
+      showFailed(params.get('order_message') || 'Payment was not completed.');
+    }
+  }
+
+  // ── Initiate Payment ──
+  async function initiatePayment() {
+    const name = document.getElementById('c_name').value.trim();
+    const email = document.getElementById('c_email').value.trim();
+    const phone = document.getElementById('c_phone').value.trim();
+    const customAmt = document.getElementById('c_amount').value;
+
+    document.getElementById('errorBox').style.display = 'none';
+
+    if (!name) return showError('Please enter your full name.');
+    if (!email || !email.includes('@')) return showError('Please enter a valid email address.');
+    if (!phone || phone.length < 10) return showError('Please enter a valid 10-digit mobile number.');
+
+    const amount = fixedAmount || customAmt;
+    if (!amount || isNaN(amount) || parseFloat(amount) < 1) return showError('Please enter a valid amount.');
+
+    const btn = document.getElementById('payBtn');
+    btn.disabled = true;
+    document.getElementById('payBtnText').innerHTML = '<div class="light-spinner" style="display:inline-block"></div> Processing...';
+
+    try {
+      let sessionId, finalOrderId;
+
+      if (fixedOrderId) {
+        // Order already exists, just get session ID
+        const res = await Utils.api('GET', `/payments/status/${fixedOrderId}`);
+        sessionId = res.order.cf_payment_session_id;
+        finalOrderId = fixedOrderId;
+      } else {
+        // Create new order
+        const res = await Utils.api('POST', '/payments/create-order', {
+          customerName: name, customerEmail: email, customerPhone: phone,
+          amount, description: 'Payment',
+        });
+        sessionId = res.paymentSessionId;
+        finalOrderId = res.orderId;
+      }
+
+      // ── Open Cashfree JS Checkout ──
+      const cashfree = await load({ mode: 'sandbox' }); // Change to 'production' for live
+
+      const checkoutOptions = {
+        paymentSessionId: sessionId,
+        redirectTarget: '_self', // Redirects in same window
+        returnUrl: `${window.location.origin}/customer/receipt.html?order_id=${finalOrderId}&order_status={order_status}&order_message={order_message}`,
+      };
+
+      cashfree.checkout(checkoutOptions);
+
+    } catch (e) {
+      showError(e.message || 'Failed to initiate payment. Please try again.');
+      btn.disabled = false;
+      document.getElementById('payBtnText').textContent = fixedAmount ? `Pay ${Utils.fmt(fixedAmount)}` : 'Pay Securely';
+    }
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('errorBox');
+    el.textContent = msg;
+    el.style.display = 'block';
+    document.getElementById('payBtn').disabled = false;
+    document.getElementById('payBtnText').textContent = fixedAmount ? `Pay ${Utils.fmt(fixedAmount)}` : 'Pay Securely';
+  }
+
+  function showSuccess(order) {
+    document.getElementById('heroDesc').textContent = 'Payment Complete';
+    document.getElementById('heroAmount').textContent = Number(order.amount || 0).toLocaleString('en-IN');
+    document.getElementById('formSection').style.display = 'none';
+    document.getElementById('failedScreen').style.display = 'none';
+    document.getElementById('suc_amount').textContent = Utils.fmt(order.amount || 0);
+    document.getElementById('suc_ref').textContent = `Ref: ${order.id || order.cf_payment_id || 'N/A'}`;
+    document.getElementById('successScreen').style.display = 'block';
+  }
+
+  function showFailed(reason) {
+    document.getElementById('formSection').style.display = 'none';
+    document.getElementById('successScreen').style.display = 'none';
+    document.getElementById('fail_reason').textContent = reason;
+    document.getElementById('failedScreen').style.display = 'block';
+  }
+
+  function resetForm() {
+    document.getElementById('failedScreen').style.display = 'none';
+    document.getElementById('formSection').style.display = 'block';
+    document.getElementById('payBtn').disabled = false;
+    document.getElementById('payBtnText').textContent = fixedAmount ? `Pay ${Utils.fmt(fixedAmount)}` : 'Pay Securely';
+  }
+
+  init();
+</script>
+</body>
+</html>
