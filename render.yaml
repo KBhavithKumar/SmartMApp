@@ -1,0 +1,35 @@
+services:
+  # ── Backend API ──
+  - type: web
+    name: smartmapp
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CASHFREE_ENV
+        value: SANDBOX
+      - key: CASHFREE_APP_ID
+        sync: false
+      - key: CASHFREE_SECRET_KEY
+        sync: false
+      - key: CASHFREE_WEBHOOK_SECRET
+        sync: false
+      - key: MERCHANT_NAME
+        value: SmartPay Business
+      - key: CURRENCY
+        value: INR
+      - key: FRONTEND_URL
+        sync: false
+      - key: PAYMENT_SUCCESS_URL
+        sync: false
+
+  # ── Frontend Static ──
+  - type: web
+    name: smartmapp-frontend
+    runtime: static
+    rootDir: frontend
+    staticPublishPath: .
+    buildCommand: echo "static"
