@@ -44,6 +44,13 @@ db.exec(`
     payload    TEXT,
     received_at TEXT DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS sessions (
+    token       TEXT PRIMARY KEY,
+    username    TEXT NOT NULL,
+    expires_at  INTEGER NOT NULL,
+    created_at  TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 // ── Order Queries ──
